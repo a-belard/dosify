@@ -1,0 +1,32 @@
+# Robot connectivity
+robot_ip: "172.20.85.100"
+
+# Saved pose names (must match Niryo Studio)
+observation_name: "dosify-vision"
+feeder_name: "dosify-pick"
+feeder_prep_name: "dosify-pick-prep"
+workspace_name: "dosify-workspace"
+
+# Tool
+tool_id: 31                   # Vacuum pump tool ID
+vacuum_speed: 400
+z_place: 0.02                 # Placement height (m)
+
+# Motion
+lock_j6: true
+safe_speed_factor: 1.0
+min_duration: 1.5
+default_move_duration: 3.0
+
+# Vision
+camera_topic: "/niryo_robot_vision/compressed_video_stream"
+detection_rate_hz: 2
+observation_settle_sec: 0.3
+warp_size: 300
+
+# Dispensing
+default_compartment_rows: 3
+default_compartment_cols: 4
+grid_scale: 1.0
+grid_offset_x: 0.0
+grid_offset_y: 0.0
