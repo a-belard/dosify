@@ -1,0 +1,49 @@
+{
+  "success": true,
+  "medications": [
+    {
+      "name": "Insulin",
+      "dosage": null,
+      "frequency": "2 times/day",
+      "special_instructions": null,
+      "confidence": {
+        "name": 100,
+        "dosage": 0,
+        "frequency": 100,
+        "instructions": 0
+      },
+      "uncertain": false
+    },
+    {
+      "name": "Analgin",
+      "dosage": null,
+      "frequency": "3 times/day",
+      "special_instructions": null,
+      "confidence": {
+        "name": 100,
+        "dosage": 0,
+        "frequency": 100,
+        "instructions": 0
+      },
+      "uncertain": false
+    },
+    {
+      "name": "Bronlin",
+      "dosage": null,
+      "frequency": "1 time/day",
+      "special_instructions": null,
+      "confidence": {
+        "name": 90,
+        "dosage": 0,
+        "frequency": 100,
+        "instructions": 0
+      },
+      "uncertain": false
+    }
+  ],
+  "overall_confidence": 49,
+  "requires_confirmation": true,
+  "raw_ocr_text": "[\n  {\n    \"medication_name\": \"Insulin\",\n    \"dosage_amount\": null,\n    \"frequency\": \"2 times/day\",\n    \"special_instructions\": null,\n    \"uncertain\": false,\n    \"confidence\": {\n      \"name\": 100,\n      \"dosage\": 0,\n      \"frequency\": 100,\n      \"instructions\": 0\n    }\n  },\n  {\n    \"medication_name\": \"Analgin\",\n    \"dosage_amount\": null,\n    \"frequency\": \"3 times/day\",\n    \"special_instructions\": null,\n    \"uncertain\": false,\n    \"confidence\": {\n      \"name\": 100,\n      \"dosage\": 0,\n      \"frequency\": 100,\n      \"instructions\": 0\n    }\n  },\n  {\n    \"medication_name\": \"Bronlin\",\n    \"dosage_amount\": null,\n    \"frequency\": \"1 time/day\",\n    \"special_instructions\": null,\n    \"uncertain\": false,\n    \"confidence\": {\n      \"name\": 90,\n      \"dosage\": 0,\n      \"frequency\": 100,\n      \"instructions\": 0\n    }\n  }\n]",
+  "processing_time_ms": 3977,
+  "user_action": "confirmed"
+}
