@@ -1,4 +1,4 @@
-# Dosify 💊🤖
+# Dosify
 ### Smart AI-Powered Medication Organizer
 
 Dosify combines Artificial Intelligence, Computer Vision, and Robotics to automate medication management and improve accessibility for people with disabilities. The system reads prescriptions, generates medication schedules, and uses a robotic arm to sort pills into the correct organizer compartments.
@@ -16,7 +16,7 @@ The user places a prescription beneath the camera, the system extracts medicatio
 
 Our primary goal during prototype development was to validate the most critical assumption: **can the robotic arm reliably pick and place pills?** By focusing on robotic manipulation first, we ensured the foundation of the system was practical before expanding the AI and scheduling components.
 
-## ✨ Key Features
+## Key Features
 
 - Prescription image capture
 - AI-powered OCR using Google Gemini
@@ -24,7 +24,7 @@ Our primary goal during prototype development was to validate the most critical 
 - Robotic pill sorting and placement
 - Verification before dispensing
 
-## 🔄 Pipeline
+## Pipeline
 
 ```
 Prescription Upload
@@ -40,7 +40,7 @@ Verification
 User Delivery
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 dosify/
@@ -67,7 +67,7 @@ dosify/
 └── src/dosify/
 ```
 
-## 🛠️ Technologies Used
+##  Technologies Used
 
 **Artificial Intelligence**
 - Google Gemini Vision
@@ -88,7 +88,7 @@ dosify/
 - Medication identification
 - Workspace monitoring
 
-## ✅ Results
+## Results
 
 **OCR Extraction** — successfully extracted:
 - Medication names
@@ -101,7 +101,7 @@ dosify/
 - Vacuum-based pickup
 - Accurate placement
 
-## 💡 Impact
+## Impact
 
 Dosify is designed to support:
 - People with visual impairments
@@ -112,7 +112,7 @@ Dosify is designed to support:
 
 By reducing human error and increasing independence, Dosify has the potential to improve both medication adherence and quality of life.
 
-## 🚀 Future Improvements
+## Future Improvements
 
 - Mobile application integration
 - Voice-assisted interaction
