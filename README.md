@@ -65,6 +65,10 @@ dosify/
 │   └── robot_control_node.py
 │
 └── src/dosify/
+├── package.xml
+├── setup.py
+├── CMakeLists.txt
+└── README.md
 ```
 
 ##  Technologies Used
