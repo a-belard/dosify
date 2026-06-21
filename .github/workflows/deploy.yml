@@ -1,0 +1,46 @@
+name: Deploy to Ned 2
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Copy to catkin workspace
+        run: |
+          rsync -a --delete --exclude='.git' \
+            --exclude='.env' \
+            --exclude='.vscode/' \
+            --exclude='public/' \
+            --exclude='ocr/scans/' \
+            --exclude='__pycache__/' \
+            ./ ~/catkin_ws/src/dosify/
+          chmod +x ~/catkin_ws/src/dosify/scripts/*.py
+          chmod +x ~/catkin_ws/src/dosify/scripts/*.sh
+
+      - name: Install Python deps and build
+        run: |
+          ~/catkin_ws/src/dosify/scripts/setup.sh
+
+      - name: Check if package definition changed
+        id: pkg
+        run: |
+          if git diff HEAD~1 --name-only | grep -qE '(CMakeLists\.txt|package\.xml|setup\.py)'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Rebuild package (if definition changed)
+        if: steps.pkg.outputs.changed == 'true'
+        run: |
+          ~/catkin_ws/src/dosify/scripts/refresh_pkg.sh
