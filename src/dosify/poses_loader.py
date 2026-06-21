@@ -21,20 +21,20 @@ def load_medications_config():
         return yaml.safe_load(f) or {}
 
 
-def pill_joints(poses, pill_key, stage):
-    return list(poses['pills'][pill_key][stage]['joints'])
+def pill_pose_name(poses, pill_key, stage):
+    return poses['pills'][pill_key][stage]['name']
 
 
-def board_view_joints(poses):
-    return list(poses['board_view']['joints'])
+def board_view_name(poses):
+    return poses['board_view']['name']
 
 
-def scan_view_joints(poses):
-    return list(poses['scan_view']['joints'])
+def scan_view_name(poses):
+    return poses['scan_view']['name']
 
 
-def patient_joints(poses, weekday):
+def patient_pose_name(poses, weekday):
     patients = poses['patients']['person_1']
     if weekday in patients.get('anchors', {}):
-        return list(patients['anchors'][weekday]['joints'])
-    return list(patients['computed'][weekday]['joints'])
+        return patients['anchors'][weekday]['name']
+    return patients['computed'][weekday]['name']

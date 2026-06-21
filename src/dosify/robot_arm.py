@@ -3,7 +3,11 @@ import actionlib
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectoryPoint
 from sensor_msgs.msg import JointState
+from niryo_robot_poses_handlers.srv import GetPose
 from std_srvs.srv import Trigger
+
+from dosify.patient_poses import build_patient_week
+from dosify.poses_loader import pill_pose_name
 
 
 class ArmController:
@@ -12,14 +16,20 @@ class ArmController:
         (-2.09, 2.09), (-1.92, 1.92), (-2.53, 2.53),
     ]
 
-    def __init__(self):
+    def __init__(self, poses_cfg=None):
         self.tool_id = int(rospy.get_param('~tool_id', 31))
         self.move_speed = float(rospy.get_param('~safe_speed_factor', 1.0))
         self.min_duration = float(rospy.get_param('~min_duration', 1.5))
         self.default_move_duration = float(
             rospy.get_param('~default_move_duration', 3.0))
         self.pick_dwell = float(rospy.get_param('~pick_dwell_sec', 0.35))
+        self.lock_j6 = rospy.get_param('~lock_j6', True)
         self.current_joints = None
+
+        self.board_view_pose = None
+        self.scan_view_pose = None
+        self.pill_poses = {}
+        self.patient_poses = {}
 
         rospy.Subscriber('/joint_states', JointState, self._joint_cb, queue_size=1)
         self.traj = actionlib.SimpleActionClient(
@@ -28,6 +38,41 @@ class ArmController:
         rospy.loginfo('Waiting for trajectory server...')
         if not self.traj.wait_for_server(timeout=rospy.Duration(10)):
             raise RuntimeError('Trajectory action server unavailable')
+
+        if poses_cfg is not None:
+            self._load_poses(poses_cfg)
+
+        self.j6_reference = self._resolve_j6_reference()
+        self._apply_j6_to_computed_patients()
+        self._update_tool()
+
+    @staticmethod
+    def _anchor_from_saved(saved):
+        p = saved['pose']
+        return {
+            'joints': saved['joints'],
+            'position': {'x': p[0], 'y': p[1], 'z': p[2]},
+        }
+
+    @classmethod
+    def from_config(cls, poses, board_name, scan_name):
+        patients = poses['patients']['person_1']
+        pills = {
+            key: {
+                'above': pill_pose_name(poses, key, 'above'),
+                'pick': pill_pose_name(poses, key, 'pick'),
+            }
+            for key in poses.get('pills', {})
+        }
+        cfg = {
+            'board_view': board_name,
+            'scan_view': scan_name,
+            'pills': pills,
+            'monday_name': patients['anchors']['monday']['name'],
+            'tuesday_name': patients['anchors']['tuesday']['name'],
+            'patient_prefix': patients.get('prefix', 'person-1'),
+        }
+        return cls(cfg)
 
     @staticmethod
     def _action_succeeded(result, state, label):
@@ -42,6 +87,85 @@ class ArmController:
             rospy.logerr('%s failed: error_code=%s', label, error_code)
             return False
         return True
+
+    @staticmethod
+    def _load_saved_pose(name):
+        srv_name = '/niryo_robot_poses_handlers/get_pose'
+        rospy.wait_for_service(srv_name, timeout=10)
+        get_pose = rospy.ServiceProxy(srv_name, GetPose)
+        resp = get_pose(name)
+        p = resp.pose
+        pose = [p.position.x, p.position.y, p.position.z,
+                p.rpy.roll, p.rpy.pitch, p.rpy.yaw]
+        joints = None
+        if hasattr(p, 'joints') and len(p.joints) == 6:
+            joints = list(p.joints)
+        orientation = None
+        if hasattr(p, 'orientation'):
+            orientation = p.orientation
+        return {
+            'name': name,
+            'pose': pose,
+            'joints': joints,
+            'orientation': orientation,
+        }
+
+    def _load_poses(self, cfg):
+        self.board_view_pose = self._load_saved_pose(cfg['board_view'])
+        self.scan_view_pose = self._load_saved_pose(cfg['scan_view'])
+        rospy.loginfo('Loaded board view: %s', cfg['board_view'])
+        rospy.loginfo('Loaded scan view: %s', cfg['scan_view'])
+
+        for pill_key, names in cfg.get('pills', {}).items():
+            self.pill_poses[pill_key] = {
+                'above': self._load_saved_pose(names['above']),
+                'pick': self._load_saved_pose(names['pick']),
+            }
+
+        monday = self._anchor_from_saved(
+            self._load_saved_pose(cfg['monday_name']))
+        tuesday = self._anchor_from_saved(
+            self._load_saved_pose(cfg['tuesday_name']))
+        week = build_patient_week(
+            monday, tuesday,
+            tuesday_name=cfg['tuesday_name'],
+            prefix=cfg.get('patient_prefix', 'person-1'))
+        for day, pdata in week.items():
+            pos = pdata['position']
+            self.patient_poses[day] = {
+                'name': pdata['name'],
+                'joints': pdata['joints'],
+                'pose': [pos['x'], pos['y'], pos['z'], 0.0, 0.0, 0.0],
+                'computed': pdata.get('computed', False),
+            }
+            if pdata.get('computed'):
+                rospy.loginfo('Computed patient pose: %s', pdata['name'])
+
+    def _apply_j6_to_computed_patients(self):
+        if not self.lock_j6 or self.j6_reference is None:
+            return
+        for pdata in self.patient_poses.values():
+            if pdata.get('computed'):
+                pdata['joints'] = self._apply_j6_lock(pdata['joints'])
+
+    def _resolve_j6_reference(self):
+        explicit = rospy.get_param('~j6_reference', None)
+        if explicit is not None:
+            return float(explicit)
+        for pose, label in ((self.board_view_pose, 'board view'),
+                            (self.scan_view_pose, 'scan view')):
+            joints = pose.get('joints') if pose else None
+            if joints and len(joints) == 6:
+                rospy.loginfo('J6 locked to %s value %.3f rad', label, joints[5])
+                return float(joints[5])
+        return None
+
+    def _apply_j6_lock(self, joints):
+        if not joints or not self.lock_j6 or self.j6_reference is None:
+            return joints
+        locked = list(joints)
+        locked[5] = self.j6_reference
+        return locked
 
     def _joint_cb(self, msg):
         try:
@@ -103,23 +227,26 @@ class ArmController:
         return self._action_succeeded(
             self.traj.get_result(), self.traj.get_state(), label)
 
+    def move_smart(self, target):
+        joints = target.get('joints') if isinstance(target, dict) else None
+        if not joints:
+            name = target.get('name', 'target') if isinstance(target, dict) else 'target'
+            rospy.logerr("Move target '%s' has no joints", name)
+            return False
+        label = target.get('name', 'move')
+        return self.move_joints_blind(joints, label)
+
     def prepare(self):
         self._wait_for_joints()
         self._update_tool()
         self.vacuum(pull=False)
         rospy.sleep(0.2)
 
-    def go_board_view(self, board_joints):
-        try:
-            rospy.wait_for_service('/tictactoe/go_observation', timeout=1.0)
-            resp = rospy.ServiceProxy('/tictactoe/go_observation', Trigger)()
-            if resp.success:
-                rospy.loginfo('board view via tictactoe go_observation')
-                return True
-            rospy.logwarn('tictactoe go_observation failed: %s', resp.message)
-        except (rospy.ROSException, rospy.ServiceException):
-            pass
-        return self.move_joints_blind(board_joints, 'board view')
+    def move_board_view(self):
+        return self.move_smart(self.board_view_pose)
+
+    def move_scan_view(self):
+        return self.move_smart(self.scan_view_pose)
 
     def vacuum(self, pull=True):
         try:
@@ -147,35 +274,29 @@ class ArmController:
             rospy.logerr('Vacuum failed: %s', exc)
             return False
 
-    def pick_at(self, above_joints, pick_joints):
-        if not self.move_joints_blind(above_joints, 'above pill'):
+    def pick_pill(self, pill_key):
+        poses = self.pill_poses.get(pill_key)
+        if not poses:
+            rospy.logerr('Unknown pill type: %s', pill_key)
             return False
-        if not self.move_joints_blind(pick_joints, 'pick pill'):
+        if not self.move_smart(poses['above']):
+            return False
+        if not self.move_smart(poses['pick']):
             return False
         if not self.vacuum(pull=True):
             return False
         rospy.sleep(self.pick_dwell)
-        if not self.move_joints_blind(above_joints, 'lift pill'):
-            return False
-        return True
+        return self.move_smart(poses['above'])
 
-    def place_at(self, target_joints, retreat_joints):
-        if not self.move_joints_blind(target_joints, 'patient box'):
+    def place_patient(self, weekday):
+        target = self.patient_poses.get(weekday)
+        if not target:
+            rospy.logerr('Unknown patient day: %s', weekday)
+            return False
+        if not self.move_smart(target):
             return False
         rospy.sleep(0.1)
         if not self.vacuum(pull=False):
             return False
         rospy.sleep(0.1)
-        return self.move_joints_blind(retreat_joints, 'retreat to scan view')
-
-    @staticmethod
-    def fetch_pose_joints(name, timeout=10):
-        from niryo_robot_poses_handlers.srv import GetPose
-        rospy.wait_for_service('/niryo_robot_poses_handlers/get_pose', timeout)
-        get_pose = rospy.ServiceProxy(
-            '/niryo_robot_poses_handlers/get_pose', GetPose)
-        resp = get_pose(name)
-        joints = resp.pose.joints
-        if not joints or len(joints) != 6:
-            raise RuntimeError("Pose '{}' has no joints".format(name))
-        return list(joints)
+        return self.move_smart(self.scan_view_pose)

@@ -1,5 +1,4 @@
-# Hardcoded poses exported from Ned (2026-06-14)
-# Joints: [j1, j2, j3, j4, j5, j6] radians
+# Pose names on the Ned; joints loaded once at startup via get_pose (like tictactoe)
 
 board_view:
   name: tictactoe-vision

@@ -1,7 +1,7 @@
 # Robot connectivity
 robot_ip: "172.20.85.100"
 
-# Pose names on the Ned (see config/poses.yaml for hardcoded joints)
+# Saved pose names on the Ned (joints loaded at startup via get_pose, like tictactoe)
 vision_pose: pill-view
 pickup_pose: pill-pickup
 
