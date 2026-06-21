@@ -11,7 +11,7 @@ import rospy
 import rospkg
 from sensor_msgs.msg import CompressedImage
 
-from dosify.medications import load_demo_placement, load_medication_map
+from dosify.medications import load_demo_placement, load_medication_map, load_allowed_medications
 from dosify.poses_loader import (
     load_medications_config, load_poses,
     patient_joints, pill_joints, scan_view_joints)
@@ -59,6 +59,7 @@ def main():
     poses = load_poses()
     med_cfg = load_medications_config()
     med_map = load_medication_map(med_cfg.get('medications'))
+    allowed = load_allowed_medications(med_cfg.get('allowed_medications'))
     placement = load_demo_placement(med_cfg.get('demo_placement'))
 
     arm = ArmController()
@@ -83,7 +84,8 @@ def main():
 
     rospy.loginfo('Step 4: prescription scan (CMU OpenAI gateway)')
     try:
-        result = scan_prescription_image(scan_path, med_map=med_map)
+        result = scan_prescription_image(
+            scan_path, med_map=med_map, allowed_names=allowed)
     except Exception as exc:
         rospy.logerr('Scan failed: %s', exc)
         return 1

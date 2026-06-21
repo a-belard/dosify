@@ -1,4 +1,9 @@
 # Medication name (case-insensitive) -> pill tray key in poses.yaml
+allowed_medications:
+  - ProcrastiNol
+  - Debugitol
+  - "Sleepn't"
+
 medications:
   procrastinol: blue
   debugitol: blue_white

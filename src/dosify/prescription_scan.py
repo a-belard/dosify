@@ -3,15 +3,27 @@ import json
 import os
 import re
 
-from dosify.medications import parse_prescription_meds, load_medication_map
+from dosify.medications import (
+    load_allowed_medications, load_medication_map,
+    parse_prescription_meds, canonical_medication_name)
 
-SCAN_PROMPT = """You are reading a handwritten or printed prescription image.
-Extract every medication name you can see.
+
+def build_scan_prompt(allowed_names):
+    listed = '\n'.join('- {}'.format(name) for name in allowed_names)
+    return """You are reading a prescription image for a pill-dispensing demo.
+
+ONLY return medications from this allowed list (use these exact spellings):
+{}
+Rules:
+- Include a drug ONLY if it clearly appears on the prescription.
+- Do NOT invent drugs. Do NOT return anything outside the list above.
+- Ignore all other medication names completely.
+- If handwriting is close to a listed name, map it to the matching allowed name.
 
 Return ONLY valid JSON (no markdown):
-{"medications": ["Name1", "Name2"]}
+{{"medications": ["ProcrastiNol"]}}
 
-Use the exact spelling visible in the image. If none found, return {"medications": []}."""
+If none of the allowed drugs appear, return {{"medications": []}}.""".format(listed)
 
 
 def _load_env():
@@ -42,9 +54,12 @@ def _parse_json(text):
     return json.loads(text)
 
 
-def scan_prescription_image(image_path, med_map=None, model=None):
+def scan_prescription_image(image_path, med_map=None, allowed_names=None, model=None):
     _load_env()
-    model = model or os.environ.get('OPENAI_MODEL', 'gpt-4o-mini')
+    model = model or os.environ.get('OPENAI_MODEL', 'gemini/gemini-2.5-flash-lite')
+    med_map = med_map or load_medication_map(None)
+    allowed_names = allowed_names or load_allowed_medications(None)
+    prompt = build_scan_prompt(allowed_names)
 
     with open(image_path, 'rb') as f:
         b64 = base64.b64encode(f.read()).decode('ascii')
@@ -58,7 +73,7 @@ def scan_prescription_image(image_path, med_map=None, model=None):
         messages=[{
             'role': 'user',
             'content': [
-                {'type': 'text', 'text': SCAN_PROMPT},
+                {'type': 'text', 'text': prompt},
                 {'type': 'image_url', 'image_url': {
                     'url': 'data:{};base64,{}'.format(mime, b64)}},
             ],
@@ -72,8 +87,16 @@ def scan_prescription_image(image_path, med_map=None, model=None):
     if not isinstance(names, list):
         raise RuntimeError('Unexpected scan response: {!r}'.format(data))
 
-    med_map = med_map or load_medication_map(None)
+    filtered = []
+    seen = set()
+    for name in names:
+        canonical = canonical_medication_name(name, med_map)
+        if canonical is None or canonical in seen:
+            continue
+        seen.add(canonical)
+        filtered.append(canonical)
+
     return {
-        'raw_names': names,
-        'plan': parse_prescription_meds(names, med_map),
+        'raw_names': filtered,
+        'plan': parse_prescription_meds(filtered, med_map),
     }
