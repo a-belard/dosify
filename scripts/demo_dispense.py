@@ -13,7 +13,7 @@ from sensor_msgs.msg import CompressedImage
 
 from dosify.medications import load_demo_placement, load_medication_map, load_allowed_medications
 from dosify.poses_loader import (
-    load_medications_config, load_poses,
+    board_view_joints, load_medications_config, load_poses,
     patient_joints, pill_joints, scan_view_joints)
 from dosify.prescription_scan import scan_prescription_image
 from dosify.robot_arm import ArmController
@@ -50,8 +50,6 @@ def save_scan_image(img):
 def main():
     rospy.init_node('dosify_demo')
 
-    board_pose = rospy.get_param('~board_view_pose', 'tictactoe-vision')
-    scan_pose = rospy.get_param('~scan_view_pose', 'scan-view')
     camera_topic = rospy.get_param(
         '~camera_topic', '/niryo_robot_vision/compressed_video_stream')
     settle = float(rospy.get_param('~observation_settle_sec', 0.5))
@@ -63,14 +61,17 @@ def main():
     placement = load_demo_placement(med_cfg.get('demo_placement'))
 
     arm = ArmController()
+    arm.prepare()
+    board_joints = board_view_joints(poses)
+    scan_joints = scan_view_joints(poses)
 
-    rospy.loginfo('Step 1: board view (%s)', board_pose)
-    if not arm.move_joints(arm.fetch_pose_joints(board_pose), 'board view'):
+    rospy.loginfo('Step 1: board view (%s)', poses['board_view']['name'])
+    if not arm.go_board_view(board_joints):
         return 1
     rospy.sleep(settle)
 
-    rospy.loginfo('Step 2: prescription scan view (%s)', scan_pose)
-    if not arm.move_joints(scan_view_joints(poses), 'scan view'):
+    rospy.loginfo('Step 2: prescription scan view (%s)', poses['scan_view']['name'])
+    if not arm.move_joints_blind(scan_joints, 'scan view'):
         return 1
     rospy.sleep(settle)
 
@@ -110,12 +111,13 @@ def main():
                 pill_joints(poses, pill, 'pick')):
             rospy.logerr('Pick failed: %s', pill)
             return 1
-        if not arm.place_at(patient_joints(poses, weekday)):
+        if not arm.place_at(
+                patient_joints(poses, weekday), scan_joints):
             rospy.logerr('Place failed: %s -> %s', pill, weekday)
             return 1
 
     rospy.loginfo('Step 6: return to board view')
-    arm.move_joints(arm.fetch_pose_joints(board_pose), 'board view')
+    arm.go_board_view(board_joints)
     rospy.loginfo('Demo complete')
     return 0
 

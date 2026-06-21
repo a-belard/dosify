@@ -1,8 +1,9 @@
 import rospy
+import actionlib
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectoryPoint
 from sensor_msgs.msg import JointState
-import actionlib
+from std_srvs.srv import Trigger
 
 
 class ArmController:
@@ -28,6 +29,20 @@ class ArmController:
         if not self.traj.wait_for_server(timeout=rospy.Duration(10)):
             raise RuntimeError('Trajectory action server unavailable')
 
+    @staticmethod
+    def _action_succeeded(result, state, label):
+        if state != actionlib.GoalStatus.SUCCEEDED:
+            rospy.logerr('%s failed: action state=%s', label, state)
+            return False
+        if result is None:
+            rospy.logerr('%s failed: empty result', label)
+            return False
+        error_code = getattr(result, 'error_code', 0)
+        if error_code not in (0, None):
+            rospy.logerr('%s failed: error_code=%s', label, error_code)
+            return False
+        return True
+
     def _joint_cb(self, msg):
         try:
             idx = [msg.name.index('joint_{}'.format(i)) for i in range(1, 7)]
@@ -35,6 +50,23 @@ class ArmController:
         except ValueError:
             if len(msg.position) >= 6:
                 self.current_joints = list(msg.position[:6])
+
+    def _wait_for_joints(self, timeout=5.0):
+        deadline = rospy.Time.now() + rospy.Duration(timeout)
+        rate = rospy.Rate(20)
+        while not rospy.is_shutdown() and rospy.Time.now() < deadline:
+            if self.current_joints is not None:
+                return True
+            rate.sleep()
+        rospy.logwarn('No joint states after %.1fs', timeout)
+        return False
+
+    def _update_tool(self):
+        try:
+            rospy.wait_for_service('/niryo_robot/tools/update_tool', timeout=2.0)
+            rospy.ServiceProxy('/niryo_robot/tools/update_tool', Trigger)()
+        except rospy.ROSException:
+            rospy.logwarn('update_tool unavailable; continuing')
 
     def _check_limits(self, joints, margin=0.02):
         for i, q in enumerate(joints):
@@ -44,7 +76,7 @@ class ArmController:
                 return False
         return True
 
-    def move_joints(self, joints, label='move'):
+    def move_joints_blind(self, joints, label='move'):
         joints = list(joints)
         if not self._check_limits(joints):
             return False
@@ -53,6 +85,10 @@ class ArmController:
         if self.current_joints:
             diff = max(abs(joints[i] - self.current_joints[i]) for i in range(6))
             duration = max(diff / self.move_speed, self.min_duration)
+            rospy.loginfo('%s (%.1fs, max diff %.2f): %s',
+                          label, duration, diff, [round(j, 3) for j in joints])
+        else:
+            rospy.logwarn('%s: no joint states; using default duration', label)
 
         goal = FollowJointTrajectoryGoal()
         goal.trajectory.joint_names = [
@@ -62,15 +98,28 @@ class ArmController:
         pt.time_from_start = rospy.Duration(duration)
         goal.trajectory.points = [pt]
 
-        rospy.loginfo('%s (%.1fs): %s', label, duration,
-                      [round(j, 3) for j in joints])
         self.traj.send_goal(goal)
         self.traj.wait_for_result()
-        state = self.traj.get_state()
-        if state != actionlib.GoalStatus.SUCCEEDED:
-            rospy.logerr('%s failed, state=%s', label, state)
-            return False
-        return True
+        return self._action_succeeded(
+            self.traj.get_result(), self.traj.get_state(), label)
+
+    def prepare(self):
+        self._wait_for_joints()
+        self._update_tool()
+        self.vacuum(pull=False)
+        rospy.sleep(0.2)
+
+    def go_board_view(self, board_joints):
+        try:
+            rospy.wait_for_service('/tictactoe/go_observation', timeout=1.0)
+            resp = rospy.ServiceProxy('/tictactoe/go_observation', Trigger)()
+            if resp.success:
+                rospy.loginfo('board view via tictactoe go_observation')
+                return True
+            rospy.logwarn('tictactoe go_observation failed: %s', resp.message)
+        except (rospy.ROSException, rospy.ServiceException):
+            pass
+        return self.move_joints_blind(board_joints, 'board view')
 
     def vacuum(self, pull=True):
         try:
@@ -99,27 +148,25 @@ class ArmController:
             return False
 
     def pick_at(self, above_joints, pick_joints):
-        if not self.move_joints(above_joints, 'above pill'):
+        if not self.move_joints_blind(above_joints, 'above pill'):
             return False
-        if not self.move_joints(pick_joints, 'pick pill'):
+        if not self.move_joints_blind(pick_joints, 'pick pill'):
             return False
         if not self.vacuum(pull=True):
             return False
         rospy.sleep(self.pick_dwell)
-        if not self.move_joints(above_joints, 'lift pill'):
+        if not self.move_joints_blind(above_joints, 'lift pill'):
             return False
         return True
 
-    def place_at(self, target_joints, retreat_joints=None):
-        if not self.move_joints(target_joints, 'patient box'):
+    def place_at(self, target_joints, retreat_joints):
+        if not self.move_joints_blind(target_joints, 'patient box'):
             return False
         rospy.sleep(0.1)
         if not self.vacuum(pull=False):
             return False
         rospy.sleep(0.1)
-        if retreat_joints is not None:
-            return self.move_joints(retreat_joints, 'retreat')
-        return True
+        return self.move_joints_blind(retreat_joints, 'retreat to scan view')
 
     @staticmethod
     def fetch_pose_joints(name, timeout=10):

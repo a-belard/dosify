@@ -25,6 +25,10 @@ def pill_joints(poses, pill_key, stage):
     return list(poses['pills'][pill_key][stage]['joints'])
 
 
+def board_view_joints(poses):
+    return list(poses['board_view']['joints'])
+
+
 def scan_view_joints(poses):
     return list(poses['scan_view']['joints'])
 

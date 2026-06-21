@@ -1,6 +1,11 @@
 # Hardcoded poses exported from Ned (2026-06-14)
 # Joints: [j1, j2, j3, j4, j5, j6] radians
 
+board_view:
+  name: tictactoe-vision
+  joints: [1.442, 0.349, -0.405, 0.0, -1.662, 0.039]
+  position: {x: 0.0, y: 0.0, z: 0.0}
+
 scan_view:
   name: scan-view
   joints: [0.666, -0.097, -0.533, 0.054, -1.12, 0.414]
