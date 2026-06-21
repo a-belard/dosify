@@ -25,6 +25,10 @@ def pill_joints(poses, pill_key, stage):
     return list(poses['pills'][pill_key][stage]['joints'])
 
 
+def scan_view_joints(poses):
+    return list(poses['scan_view']['joints'])
+
+
 def patient_joints(poses, weekday):
     patients = poses['patients']['person_1']
     if weekday in patients.get('anchors', {}):

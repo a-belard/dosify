@@ -14,7 +14,7 @@ from sensor_msgs.msg import CompressedImage
 from dosify.medications import load_demo_placement, load_medication_map
 from dosify.poses_loader import (
     load_medications_config, load_poses,
-    patient_joints, pill_joints)
+    patient_joints, pill_joints, scan_view_joints)
 from dosify.prescription_scan import scan_prescription_image
 from dosify.robot_arm import ArmController
 
@@ -69,7 +69,7 @@ def main():
     rospy.sleep(settle)
 
     rospy.loginfo('Step 2: prescription scan view (%s)', scan_pose)
-    if not arm.move_joints(arm.fetch_pose_joints(scan_pose), 'scan view'):
+    if not arm.move_joints(scan_view_joints(poses), 'scan view'):
         return 1
     rospy.sleep(settle)
 
