@@ -51,6 +51,7 @@ def main():
     rospy.init_node('dosify_demo')
 
     board_pose = rospy.get_param('~board_view_pose', 'tictactoe-vision')
+    scan_pose = rospy.get_param('~scan_view_pose', 'scan-view')
     camera_topic = rospy.get_param(
         '~camera_topic', '/niryo_robot_vision/compressed_video_stream')
     settle = float(rospy.get_param('~observation_settle_sec', 0.5))
@@ -67,8 +68,8 @@ def main():
         return 1
     rospy.sleep(settle)
 
-    rospy.loginfo('Step 2: scan view (pill-view)')
-    if not arm.move_joints(poses['vision']['joints'], 'scan view'):
+    rospy.loginfo('Step 2: prescription scan view (%s)', scan_pose)
+    if not arm.move_joints(arm.fetch_pose_joints(scan_pose), 'scan view'):
         return 1
     rospy.sleep(settle)
 

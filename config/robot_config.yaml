@@ -36,3 +36,4 @@ pick_dwell_sec: 0.35
 
 # Demo
 board_view_pose: "tictactoe-vision"
+scan_view_pose: "scan-view"

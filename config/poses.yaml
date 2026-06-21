@@ -1,6 +1,9 @@
 # Hardcoded poses exported from Ned (2026-06-14)
 # Joints: [j1, j2, j3, j4, j5, j6] radians
 
+scan_view:
+  name: scan-view
+
 vision:
   name: pill-view
   joints: [-2.028, -0.188, -0.264, 0.002, -1.322, 0.223]
