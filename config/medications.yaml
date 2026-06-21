@@ -1,0 +1,12 @@
+# Medication name (case-insensitive) -> pill tray key in poses.yaml
+medications:
+  procrastinol: blue
+  debugitol: blue_white
+  "sleepn't": green_white
+  sleepnt: green_white
+
+# Demo: which patient box (weekday key) each pill type goes to
+demo_placement:
+  blue: monday
+  blue_white: tuesday
+  green_white: tuesday

@@ -1,0 +1,7 @@
+<launch>
+  <node name="dosify_demo" pkg="dosify" type="demo_dispense.py" output="screen">
+    <rosparam file="$(find dosify)/config/robot_config.yaml" command="load" />
+    <rosparam file="$(find dosify)/config/poses.yaml" command="load" />
+    <rosparam file="$(find dosify)/config/medications.yaml" command="load" />
+  </node>
+</launch>

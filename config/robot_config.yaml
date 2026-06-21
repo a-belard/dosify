@@ -1,16 +1,27 @@
 # Robot connectivity
 robot_ip: "172.20.85.100"
 
-# Saved pose names (must match Niryo Studio)
-observation_name: "dosify-vision"
-feeder_name: "dosify-pick"
-feeder_prep_name: "dosify-pick-prep"
-workspace_name: "dosify-workspace"
+# Pose names on the Ned (see config/poses.yaml for hardcoded joints)
+vision_pose: pill-view
+pickup_pose: pill-pickup
+
+pill_types:
+  - blue
+  - green
+  - white
+  - blue_green
+  - blue_white
+  - green_white
+
+patient_boxes:
+  person_1:
+    prefix: person-1
+    anchor_days: [monday, tuesday]
 
 # Tool
-tool_id: 31                   # Vacuum pump tool ID
+tool_id: 31
 vacuum_speed: 400
-z_place: 0.02                 # Placement height (m)
+z_place: 0.02
 
 # Motion
 lock_j6: true
@@ -20,13 +31,8 @@ default_move_duration: 3.0
 
 # Vision
 camera_topic: "/niryo_robot_vision/compressed_video_stream"
-detection_rate_hz: 2
-observation_settle_sec: 0.3
-warp_size: 300
+observation_settle_sec: 0.5
+pick_dwell_sec: 0.35
 
-# Dispensing
-default_compartment_rows: 3
-default_compartment_cols: 4
-grid_scale: 1.0
-grid_offset_x: 0.0
-grid_offset_y: 0.0
+# Demo
+board_view_pose: "tictactoe-vision"

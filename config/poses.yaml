@@ -1,0 +1,104 @@
+# Hardcoded poses exported from Ned (2026-06-14)
+# Joints: [j1, j2, j3, j4, j5, j6] radians
+
+vision:
+  name: pill-view
+  joints: [-2.028, -0.188, -0.264, 0.002, -1.322, 0.223]
+  position: {x: -0.1186, y: -0.2409, z: 0.2137}
+
+pickup:
+  name: pill-pickup
+  joints: [-2.218, -1.144, 0.339, -0.127, -0.761, 0.698]
+  position: {x: -0.2490, y: -0.3161, z: 0.0066}
+
+pills:
+  blue:
+    pick:
+      name: pick-blue
+      joints: [-2.136, -1.146, 0.322, -0.057, -0.726, 0.184]
+      position: {x: -0.2180, y: -0.3366, z: 0.0029}
+    above:
+      name: above-blue
+      joints: [-2.144, -1.031, 0.216, -0.084, -0.663, 0.167]
+      position: {x: -0.2202, y: -0.3323, z: 0.0288}
+  green:
+    pick:
+      name: pick-green
+      joints: [-1.975, -1.123, 0.273, -0.081, -0.661, 0.331]
+      position: {x: -0.1611, y: -0.3649, z: 0.0034}
+    above:
+      name: above-green
+      joints: [-1.985, -0.985, 0.175, -0.089, -0.664, 0.331]
+      position: {x: -0.1637, y: -0.3592, z: 0.0385}
+  white:
+    pick:
+      name: pick-white
+      joints: [-2.165, -0.92, -0.14, -0.127, -0.532, 0.239]
+      position: {x: -0.1910, y: -0.2728, z: 0.0075}
+    above:
+      name: above-white
+      joints: [-2.166, -0.702, -0.299, -0.14, -0.532, 0.226]
+      position: {x: -0.1836, y: -0.2601, z: 0.0536}
+  blue_green:
+    pick:
+      name: pick-blue-green
+      joints: [-1.841, -1.181, 0.361, 0.075, -0.73, 0.684]
+      position: {x: -0.1043, y: -0.3908, z: -0.0035}
+    above:
+      name: above-blue-green
+      joints: [-1.835, -1.009, 0.255, 0.074, -0.738, 0.684]
+      position: {x: -0.1018, y: -0.3906, z: 0.0442}
+  blue_white:
+    pick:
+      name: pick-blue-white
+      joints: [-1.975, -0.913, -0.164, 0.005, -0.532, 0.27]
+      position: {x: -0.1287, y: -0.3006, z: 0.0063}
+    above:
+      name: above-blue-white
+      joints: [-1.95, -0.782, -0.283, -0.052, -0.537, 0.276]
+      position: {x: -0.1180, y: -0.2891, z: 0.0307}
+  green_white:
+    pick:
+      name: pick-green-white
+      joints: [-1.787, -0.958, -0.12, -0.1, -0.549, 0.608]
+      position: {x: -0.0756, y: -0.3220, z: -0.0023}
+    above:
+      name: above-green-white
+      joints: [-1.756, -0.725, -0.336, -0.103, -0.552, 0.609]
+      position: {x: -0.0604, y: -0.2974, z: 0.0406}
+
+patients:
+  person_1:
+    prefix: person-1
+    # Offset per day (Tue - Mon): joints [+0.093, 0, -0.001, +0.061, +0.002, +0.002]
+    #                              xyz   [+0.0115, +0.0169, -0.0003]
+    anchors:
+      monday:
+        name: person-1-monday
+        joints: [-0.658, -0.347, -0.886, -0.268, -0.289, 0.874]
+        position: {x: 0.1621, y: -0.1317, z: 0.0661}
+      tuesday:
+        name: person-1-tuedsday
+        joints: [-0.565, -0.347, -0.887, -0.207, -0.287, 0.876]
+        position: {x: 0.1735, y: -0.1148, z: 0.0659}
+    computed:
+      wednesday:
+        name: person-1-wednesday
+        joints: [-0.472, -0.347, -0.888, -0.146, -0.285, 0.878]
+        position: {x: 0.1850, y: -0.0980, z: 0.0656}
+      thursday:
+        name: person-1-thursday
+        joints: [-0.379, -0.347, -0.889, -0.085, -0.283, 0.880]
+        position: {x: 0.1965, y: -0.0811, z: 0.0653}
+      friday:
+        name: person-1-friday
+        joints: [-0.286, -0.347, -0.890, -0.024, -0.281, 0.882]
+        position: {x: 0.2080, y: -0.0643, z: 0.0650}
+      saturday:
+        name: person-1-saturday
+        joints: [-0.193, -0.347, -0.891, 0.037, -0.279, 0.884]
+        position: {x: 0.2195, y: -0.0474, z: 0.0648}
+      sunday:
+        name: person-1-sunday
+        joints: [-0.100, -0.347, -0.892, 0.098, -0.277, 0.886]
+        position: {x: 0.2310, y: -0.0305, z: 0.0645}

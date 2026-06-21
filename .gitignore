@@ -1,4 +1,25 @@
-branch_structure.json
+.DS_Store
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# IDE / PolinRider attack paths — do not commit
+.vscode/
+public/fonts/
 temp_auto_push.bat
 temp_interactive_push.bat
-.gitignore
+branch_structure.json
+
+# ROS
+devel/
+build/
+install/
+log/
+
+# Demo scans
+ocr/scans/

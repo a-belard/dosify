@@ -1,0 +1,19 @@
+[Unit]
+Description=Dosify pill dispensing (Niryo)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=niryo
+Group=niryo
+WorkingDirectory=/home/niryo
+Environment=HOME=/home/niryo
+ExecStart=/home/niryo/catkin_ws/src/dosify/scripts/dosify-autostart.sh
+Restart=on-failure
+RestartSec=20
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,9 +1,11 @@
 <launch>
   <node name="robot_control" pkg="dosify" type="robot_control_node.py" output="screen">
     <rosparam file="$(find dosify)/config/robot_config.yaml" command="load" />
+    <rosparam file="$(find dosify)/config/poses.yaml" command="load" />
   </node>
 
   <node name="dispense_node" pkg="dosify" type="dispense_node.py" output="screen">
     <rosparam file="$(find dosify)/config/robot_config.yaml" command="load" />
+    <rosparam file="$(find dosify)/config/poses.yaml" command="load" />
   </node>
 </launch>

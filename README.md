@@ -40,6 +40,53 @@ Verification
 User Delivery
 ```
 
+## Ned 2 setup (robot)
+
+Same self-hosted GitHub Actions runner as Tic-Tac-Toe. Push to `main` deploys automatically.
+
+### One-time on the Ned
+
+```bash
+# Clone into catkin (if not already there)
+mkdir -p ~/catkin_ws/src
+git clone https://github.com/a-belard/dosify.git ~/catkin_ws/src/dosify
+
+# Setup: pip deps, .env template, catkin build
+~/catkin_ws/src/dosify/scripts/setup.sh
+
+# Add your CMU OpenAI gateway key
+nano ~/catkin_ws/src/dosify/.env
+```
+
+`.env` example:
+
+```
+OPENAI_API_KEY=sk-...
+OPENAI_BASE_URL=https://ai-gateway.andrew.cmu.edu
+OPENAI_MODEL=gpt-4o-mini
+```
+
+### Run the demo
+
+```bash
+source /opt/ros/noetic/setup.bash
+source ~/catkin_ws/devel/setup.bash
+~/catkin_ws/src/dosify/scripts/dosify.sh --demo
+```
+
+### Useful commands
+
+| Command | Purpose |
+|---------|---------|
+| `scripts/setup.sh` | Install deps + build (runs on deploy) |
+| `scripts/refresh_pkg.sh` | Rebuild after code changes |
+| `scripts/dosify.sh --demo` | Full demo (scan → pick → place) |
+| `scripts/dosify.sh` | Launch idle ROS nodes only |
+
+Nothing starts on boot — run scripts manually when you are ready.
+
+---
+
 ## Project Structure
 
 ```

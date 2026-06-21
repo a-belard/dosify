@@ -1,0 +1,57 @@
+import re
+
+
+DEFAULT_MEDICATIONS = {
+    'procrastinol': 'blue',
+    'debugitol': 'blue_white',
+    "sleepn't": 'green_white',
+    'sleepnt': 'green_white',
+}
+
+DEFAULT_DEMO_PLACEMENT = {
+    'blue': 'monday',
+    'blue_white': 'tuesday',
+    'green_white': 'tuesday',
+}
+
+
+def _norm(name):
+    return re.sub(r'[^a-z0-9]', '', str(name).lower())
+
+
+def load_medication_map(raw):
+    if not raw:
+        return dict(DEFAULT_MEDICATIONS)
+    return {_norm(k): v for k, v in raw.items()}
+
+
+def load_demo_placement(raw):
+    if not raw:
+        return dict(DEFAULT_DEMO_PLACEMENT)
+    return dict(raw)
+
+
+def medication_to_pill(name, med_map=None):
+    med_map = med_map or DEFAULT_MEDICATIONS
+    key = _norm(name)
+    if key in med_map:
+        return med_map[key]
+    for pattern, pill in med_map.items():
+        if pattern in key or key in pattern:
+            return pill
+    return None
+
+
+def parse_prescription_meds(names, med_map=None):
+    med_map = med_map or DEFAULT_MEDICATIONS
+    plan = []
+    seen = set()
+    for name in names:
+        pill = medication_to_pill(name, med_map)
+        if pill is None:
+            continue
+        if pill in seen:
+            continue
+        seen.add(pill)
+        plan.append({'medication': name, 'pill': pill})
+    return plan
