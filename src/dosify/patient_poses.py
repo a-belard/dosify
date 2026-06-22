@@ -1,4 +1,4 @@
-"""Extrapolate person-1 weekday box poses from Monday + Tuesday anchors."""
+"""Extrapolate weekday box poses from Monday + Tuesday anchors."""
 
 WEEKDAYS = (
     'monday', 'tuesday', 'wednesday', 'thursday',

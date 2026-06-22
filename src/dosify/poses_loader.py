@@ -25,16 +25,20 @@ def pill_pose_name(poses, pill_key, stage):
     return poses['pills'][pill_key][stage]['name']
 
 
-def board_view_name(poses):
-    return poses['board_view']['name']
+def hub_pose_name(poses):
+    return poses['hub']['name']
 
 
 def scan_view_name(poses):
     return poses['scan_view']['name']
 
 
-def patient_pose_name(poses, weekday):
-    patients = poses['patients']['person_1']
+def patient_pose_name(poses, person_key, weekday):
+    patients = poses['patients'][person_key]
     if weekday in patients.get('anchors', {}):
         return patients['anchors'][weekday]['name']
     return patients['computed'][weekday]['name']
+
+
+def patient_person_keys(poses):
+    return list(poses.get('patients', {}).keys())

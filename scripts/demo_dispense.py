@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Demo: board view -> scan prescription -> pick pills -> place in patient boxes."""
+"""Demo: scan prescription -> pick pills -> place in patient boxes."""
 
 import os
 import sys
@@ -48,7 +48,7 @@ def save_scan_image(img):
 def main():
     rospy.init_node('dosify_demo')
 
-    board_pose = rospy.get_param('~board_view_pose', 'tictactoe-vision')
+    hub_pose = rospy.get_param('~hub_pose', 'about-to-pills')
     scan_pose = rospy.get_param('~scan_view_pose', 'scan-view')
     camera_topic = rospy.get_param(
         '~camera_topic', '/niryo_robot_vision/compressed_video_stream')
@@ -60,20 +60,15 @@ def main():
     allowed = load_allowed_medications(med_cfg.get('allowed_medications'))
     placement = load_demo_placement(med_cfg.get('demo_placement'))
 
-    arm = ArmController.from_config(poses, board_pose, scan_pose)
+    arm = ArmController.from_config(poses, hub_pose, scan_pose)
     arm.prepare()
 
-    rospy.loginfo('Step 1: board view (%s)', board_pose)
-    if not arm.move_board_view():
-        return 1
-    rospy.sleep(settle)
-
-    rospy.loginfo('Step 2: prescription scan view (%s)', scan_pose)
+    rospy.loginfo('Step 1: prescription scan view (%s)', scan_pose)
     if not arm.move_scan_view():
         return 1
     rospy.sleep(settle)
 
-    rospy.loginfo('Step 3: capture prescription')
+    rospy.loginfo('Step 2: capture prescription')
     img = capture_frame(camera_topic)
     if img is None:
         rospy.logerr('No camera frame on %s', camera_topic)
@@ -81,7 +76,7 @@ def main():
     scan_path = save_scan_image(img)
     rospy.loginfo('Saved %s', scan_path)
 
-    rospy.loginfo('Step 4: prescription scan (CMU OpenAI gateway)')
+    rospy.loginfo('Step 3: prescription scan (CMU OpenAI gateway)')
     try:
         result = scan_prescription_image(
             scan_path, med_map=med_map, allowed_names=allowed)
@@ -100,7 +95,7 @@ def main():
         weekday = placement[pill]
         rospy.loginfo('  %s -> %s -> %s', item['medication'], pill, weekday)
 
-    rospy.loginfo('Step 5: pick and place')
+    rospy.loginfo('Step 4: pick and place')
     for item in plan:
         pill = item['pill']
         weekday = placement[pill]
@@ -111,8 +106,8 @@ def main():
             rospy.logerr('Place failed: %s -> %s', pill, weekday)
             return 1
 
-    rospy.loginfo('Step 6: return to board view')
-    arm.move_board_view()
+    rospy.loginfo('Step 5: return to hub')
+    arm.move_hub()
     rospy.loginfo('Demo complete')
     return 0
 

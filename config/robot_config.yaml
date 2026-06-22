@@ -1,8 +1,8 @@
 # Robot connectivity
 robot_ip: "172.20.85.100"
 
-# Saved pose names on the Ned (joints loaded at startup via get_pose, like tictactoe)
-vision_pose: pill-view
+# Saved pose names on the Ned (joints loaded at startup via get_pose)
+vision_pose: pills-view
 pickup_pose: pill-pickup
 
 pill_types:
@@ -16,6 +16,9 @@ pill_types:
 patient_boxes:
   person_1:
     prefix: person-1
+    anchor_days: [monday, tuesday]
+  person_2:
+    prefix: person-2
     anchor_days: [monday, tuesday]
 
 # Tool
@@ -35,5 +38,5 @@ observation_settle_sec: 0.5
 pick_dwell_sec: 0.35
 
 # Demo
-board_view_pose: "tictactoe-vision"
+hub_pose: "about-to-pills"
 scan_view_pose: "scan-view"

@@ -24,9 +24,10 @@ class ArmController:
             rospy.get_param('~default_move_duration', 3.0))
         self.pick_dwell = float(rospy.get_param('~pick_dwell_sec', 0.35))
         self.lock_j6 = rospy.get_param('~lock_j6', True)
+        self.at_target_tol = float(rospy.get_param('~at_target_tol', 0.04))
         self.current_joints = None
 
-        self.board_view_pose = None
+        self.hub_pose = None
         self.scan_view_pose = None
         self.pill_poses = {}
         self.patient_poses = {}
@@ -55,8 +56,7 @@ class ArmController:
         }
 
     @classmethod
-    def from_config(cls, poses, board_name, scan_name):
-        patients = poses['patients']['person_1']
+    def from_config(cls, poses, hub_name, scan_name):
         pills = {
             key: {
                 'above': pill_pose_name(poses, key, 'above'),
@@ -64,13 +64,18 @@ class ArmController:
             }
             for key in poses.get('pills', {})
         }
+        patients = {}
+        for person_key, pdata in poses.get('patients', {}).items():
+            patients[person_key] = {
+                'monday_name': pdata['anchors']['monday']['name'],
+                'tuesday_name': pdata['anchors']['tuesday']['name'],
+                'prefix': pdata.get('prefix', person_key.replace('_', '-')),
+            }
         cfg = {
-            'board_view': board_name,
+            'hub': hub_name,
             'scan_view': scan_name,
             'pills': pills,
-            'monday_name': patients['anchors']['monday']['name'],
-            'tuesday_name': patients['anchors']['tuesday']['name'],
-            'patient_prefix': patients.get('prefix', 'person-1'),
+            'patients': patients,
         }
         return cls(cfg)
 
@@ -110,10 +115,14 @@ class ArmController:
             'orientation': orientation,
         }
 
+    def _load_all_patients(self, patients_cfg):
+        for person_key, cfg in patients_cfg.items():
+            self._load_patient_week(person_key, cfg)
+
     def _load_poses(self, cfg):
-        self.board_view_pose = self._load_saved_pose(cfg['board_view'])
+        self.hub_pose = self._load_saved_pose(cfg['hub'])
         self.scan_view_pose = self._load_saved_pose(cfg['scan_view'])
-        rospy.loginfo('Loaded board view: %s', cfg['board_view'])
+        rospy.loginfo('Loaded hub: %s', cfg['hub'])
         rospy.loginfo('Loaded scan view: %s', cfg['scan_view'])
 
         for pill_key, names in cfg.get('pills', {}).items():
@@ -122,6 +131,9 @@ class ArmController:
                 'pick': self._load_saved_pose(names['pick']),
             }
 
+        self._load_all_patients(cfg.get('patients', {}))
+
+    def _load_patient_week(self, person_key, cfg):
         monday = self._anchor_from_saved(
             self._load_saved_pose(cfg['monday_name']))
         tuesday = self._anchor_from_saved(
@@ -129,14 +141,17 @@ class ArmController:
         week = build_patient_week(
             monday, tuesday,
             tuesday_name=cfg['tuesday_name'],
-            prefix=cfg.get('patient_prefix', 'person-1'))
+            prefix=cfg.get('prefix', person_key.replace('_', '-')))
         for day, pdata in week.items():
             pos = pdata['position']
-            self.patient_poses[day] = {
+            key = '{}/{}'.format(person_key, day)
+            self.patient_poses[key] = {
                 'name': pdata['name'],
                 'joints': pdata['joints'],
                 'pose': [pos['x'], pos['y'], pos['z'], 0.0, 0.0, 0.0],
                 'computed': pdata.get('computed', False),
+                'person': person_key,
+                'weekday': day,
             }
             if pdata.get('computed'):
                 rospy.loginfo('Computed patient pose: %s', pdata['name'])
@@ -152,7 +167,7 @@ class ArmController:
         explicit = rospy.get_param('~j6_reference', None)
         if explicit is not None:
             return float(explicit)
-        for pose, label in ((self.board_view_pose, 'board view'),
+        for pose, label in ((self.hub_pose, 'hub'),
                             (self.scan_view_pose, 'scan view')):
             joints = pose.get('joints') if pose else None
             if joints and len(joints) == 6:
@@ -200,7 +215,15 @@ class ArmController:
                 return False
         return True
 
-    def move_joints_blind(self, joints, label='move'):
+    def _already_at(self, target):
+        joints = target.get('joints') if target else None
+        if not joints or not self.current_joints:
+            return False
+        return all(
+            abs(self.current_joints[i] - joints[i]) < self.at_target_tol
+            for i in range(6))
+
+    def move_joints_blind(self, joints, label='move', duration_scale=1.0):
         joints = list(joints)
         if not self._check_limits(joints):
             return False
@@ -209,10 +232,12 @@ class ArmController:
         if self.current_joints:
             diff = max(abs(joints[i] - self.current_joints[i]) for i in range(6))
             duration = max(diff / self.move_speed, self.min_duration)
+            duration *= duration_scale
             rospy.loginfo('%s (%.1fs, max diff %.2f): %s',
                           label, duration, diff, [round(j, 3) for j in joints])
         else:
             rospy.logwarn('%s: no joint states; using default duration', label)
+            duration *= duration_scale
 
         goal = FollowJointTrajectoryGoal()
         goal.trajectory.joint_names = [
@@ -227,14 +252,17 @@ class ArmController:
         return self._action_succeeded(
             self.traj.get_result(), self.traj.get_state(), label)
 
-    def move_smart(self, target):
+    def move_smart(self, target, duration_scale=1.0):
         joints = target.get('joints') if isinstance(target, dict) else None
         if not joints:
             name = target.get('name', 'target') if isinstance(target, dict) else 'target'
             rospy.logerr("Move target '%s' has no joints", name)
             return False
+        if self._already_at(target):
+            rospy.loginfo('Already at %s', target.get('name', 'target'))
+            return True
         label = target.get('name', 'move')
-        return self.move_joints_blind(joints, label)
+        return self.move_joints_blind(joints, label, duration_scale)
 
     def prepare(self):
         self._wait_for_joints()
@@ -242,8 +270,8 @@ class ArmController:
         self.vacuum(pull=False)
         rospy.sleep(0.2)
 
-    def move_board_view(self):
-        return self.move_smart(self.board_view_pose)
+    def move_hub(self):
+        return self.move_smart(self.hub_pose)
 
     def move_scan_view(self):
         return self.move_smart(self.scan_view_pose)
@@ -279,6 +307,8 @@ class ArmController:
         if not poses:
             rospy.logerr('Unknown pill type: %s', pill_key)
             return False
+        if not self.move_smart(self.hub_pose):
+            return False
         if not self.move_smart(poses['above']):
             return False
         if not self.move_smart(poses['pick']):
@@ -288,10 +318,13 @@ class ArmController:
         rospy.sleep(self.pick_dwell)
         return self.move_smart(poses['above'])
 
-    def place_patient(self, weekday):
-        target = self.patient_poses.get(weekday)
+    def place_patient(self, weekday, person='person_1'):
+        key = '{}/{}'.format(person, weekday)
+        target = self.patient_poses.get(key)
         if not target:
-            rospy.logerr('Unknown patient day: %s', weekday)
+            rospy.logerr('Unknown patient box: %s', key)
+            return False
+        if not self.move_smart(self.hub_pose):
             return False
         if not self.move_smart(target):
             return False
@@ -299,4 +332,4 @@ class ArmController:
         if not self.vacuum(pull=False):
             return False
         rospy.sleep(0.1)
-        return self.move_smart(self.scan_view_pose)
+        return self.move_smart(self.hub_pose)
